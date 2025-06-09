@@ -1,19 +1,35 @@
 // src/auth/SignUp.jsx
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getFirestore, setDoc, doc } from 'firebase/firestore';
 import app from '../firebase';
 import React, { useState } from 'react';
 
 const auth = getAuth(app);
+const db = getFirestore(app);
 
 export default function SignUp() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [avatar, setAvatar] = useState('');
 
   const handleSignup = async (e) => {
     e.preventDefault();
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      alert('User signed up!');
+      const userCred = await createUserWithEmailAndPassword(auth, email, password);
+      const uid = userCred.user.uid;
+
+      // Save user profile in Firestore
+      await setDoc(doc(db, "users", uid), {
+        uid,
+        email,
+        username,
+        avatar,
+        online: true, // default when logged in
+        createdAt: new Date()
+      });
+
+      alert('User signed up and profile saved!');
     } catch (error) {
       alert(error.message);
     }
@@ -24,6 +40,27 @@ export default function SignUp() {
       <h2>Sign Up</h2>
       <input type="email" placeholder="Email" onChange={(e) => setEmail(e.target.value)} />
       <input type="password" placeholder="Password" onChange={(e) => setPassword(e.target.value)} />
+      <input type="text" placeholder="Username" onChange={(e) => setUsername(e.target.value)} />
+      <p>Select an avatar:</p>
+<div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+  {['😎', '😊', '👩‍💻', '🐱', '🐶', '👾', '🧠', '🎮', '🚀', '🧑‍🚀'].map((emoji) => (
+    <button
+      key={emoji}
+      type="button"
+      onClick={() => setAvatar(emoji)}
+      style={{
+        fontSize: '24px',
+        padding: '10px',
+        border: avatar === emoji ? '2px solid blue' : '1px solid gray',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        background: 'white'
+      }}
+    >
+      {emoji}
+    </button>
+  ))}
+</div>
       <button type="submit">Register</button>
     </form>
   );
