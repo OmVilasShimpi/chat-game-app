@@ -1,33 +1,36 @@
 // src/App.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import SignUp from './auth/SignUp';
 import Login from './auth/Login';
 import GoogleLoginButton from './auth/GoogleLoginButton';
-import { AuthProvider, useAuth } from './auth/AuthContext';
+import { AuthProvider } from './auth/AuthContext';
 import { getAuth } from "firebase/auth";
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
+import UserList from './components/UserList';
+import ChatWindow from './components/ChatWindow';
+import { useAuth } from './auth/AuthContext';
 
-
-function UserInfo() {
+function UserInfo({ onLogout }) {
   const { currentUser } = useAuth();
 
   const handleLogout = async () => {
-  const auth = getAuth();
-  const user = auth.currentUser;
+    const auth = getAuth();
+    const user = auth.currentUser;
 
-  if (user) {
-    const userRef = doc(db, "users", user.uid);
-    await setDoc(userRef, { online: false }, { merge: true });
-  }
+    if (user) {
+      const userRef = doc(db, "users", user.uid);
+      await setDoc(userRef, { online: false }, { merge: true });
+    }
 
-  try {
-    await auth.signOut();
-    alert("Logged out successfully!");
-  } catch (error) {
-    alert("Logout failed: " + error.message);
-  }
-};
+    try {
+      await auth.signOut();
+      onLogout(); // Clear selected user when logging out
+      alert("Logged out successfully!");
+    } catch (error) {
+      alert("Logout failed: " + error.message);
+    }
+  };
 
   return currentUser ? (
     <div>
@@ -39,16 +42,35 @@ function UserInfo() {
   );
 }
 
+function MainApp() {
+  const [selectedUser, setSelectedUser] = useState(null);
+  const { currentUser } = useAuth();
+
+  const handleLogout = () => {
+    setSelectedUser(null); // Clear chat on logout
+  };
+
+  return (
+    <div>
+      <h1>Firebase Auth + Profile</h1>
+      <SignUp />
+      <Login />
+      <GoogleLoginButton />
+      <UserInfo onLogout={handleLogout} />
+      {currentUser && (
+        <>
+          <UserList onUserSelect={(user) => setSelectedUser(user)} />
+          {selectedUser && <ChatWindow selectedUser={selectedUser} />}
+        </>
+      )}
+    </div>
+  );
+}
+
 function App() {
   return (
     <AuthProvider>
-      <div>
-        <h1>Firebase Auth + Profile</h1>
-        <SignUp />
-        <Login />
-        <GoogleLoginButton />
-        <UserInfo />
-      </div>
+      <MainApp />
     </AuthProvider>
   );
 }
