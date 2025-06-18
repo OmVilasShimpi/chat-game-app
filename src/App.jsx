@@ -1,14 +1,17 @@
 // src/App.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import SignUp from './auth/SignUp';
 import Login from './auth/Login';
 import GoogleLoginButton from './auth/GoogleLoginButton';
 import { AuthProvider } from './auth/AuthContext';
 import { getAuth } from "firebase/auth";
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 import UserList from './components/UserList';
 import ChatWindow from './components/ChatWindow';
+import FriendRequest from './components/FriendRequest';
+import FriendRequestsInbox from './components/FriendRequestsInbox';
+import FriendList from './components/FriendList';
 import { useAuth } from './auth/AuthContext';
 
 function UserInfo({ onLogout }) {
@@ -25,7 +28,7 @@ function UserInfo({ onLogout }) {
 
     try {
       await auth.signOut();
-      onLogout(); // Clear selected user when logging out
+      onLogout();
       alert("Logged out successfully!");
     } catch (error) {
       alert("Logout failed: " + error.message);
@@ -44,10 +47,35 @@ function UserInfo({ onLogout }) {
 
 function MainApp() {
   const [selectedUser, setSelectedUser] = useState(null);
+  const [friendsMap, setFriendsMap] = useState({});
   const { currentUser } = useAuth();
 
   const handleLogout = () => {
-    setSelectedUser(null); // Clear chat on logout
+    setSelectedUser(null);
+  };
+
+  // ✅ Real-time friend list listener
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const friendRef = doc(db, 'friends', currentUser.uid);
+    const unsubscribe = onSnapshot(friendRef, (snap) => {
+      if (snap.exists()) {
+        setFriendsMap(snap.data());
+      } else {
+        setFriendsMap({});
+      }
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
+
+  const handleUserSelect = (user) => {
+    if (friendsMap[user.uid]) {
+      setSelectedUser(user);
+    } else {
+      alert("You can only chat with your friends.");
+    }
   };
 
   return (
@@ -57,10 +85,14 @@ function MainApp() {
       <Login />
       <GoogleLoginButton />
       <UserInfo onLogout={handleLogout} />
+
       {currentUser && (
         <>
-          <UserList onUserSelect={(user) => setSelectedUser(user)} />
+          <UserList onUserSelect={handleUserSelect} />
           {selectedUser && <ChatWindow selectedUser={selectedUser} />}
+          <FriendRequest />
+          <FriendRequestsInbox />
+          <FriendList />
         </>
       )}
     </div>

@@ -1,15 +1,15 @@
-// src/components/UserList.jsx
+// src/components/FriendList.jsx
 import React, { useEffect, useState } from 'react';
-import { collection, doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../auth/AuthContext';
 
-export default function UserList({ onUserSelect }) {
+export default function FriendList() {
   const { currentUser } = useAuth();
   const [friends, setFriends] = useState([]);
 
   useEffect(() => {
-    const fetchFriends = async () => {
+    const loadFriends = async () => {
       if (!currentUser) return;
 
       try {
@@ -34,31 +34,26 @@ export default function UserList({ onUserSelect }) {
 
         setFriends(friendProfiles);
       } catch (error) {
-        console.error('Failed to fetch friends:', error);
-        setFriends([]);
+        console.error("Failed to load friends:", error);
       }
     };
 
-    fetchFriends();
+    loadFriends();
   }, [currentUser]);
 
   return (
-    <div>
-      <h3>Available Users</h3>
+    <div style={{ border: '1px solid #ccc', padding: '12px', marginTop: '20px' }}>
+      <h3>Your Friends</h3>
       {friends.length === 0 ? (
-        <p>No friends to show.</p>
+        <p>You have no friends yet.</p>
       ) : (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          {friends.map((user) => (
-            <li
-              key={user.uid}
-              onClick={() => onUserSelect(user)}
-              style={{ cursor: 'pointer', marginBottom: '8px' }}
-            >
-              <span style={{ fontSize: '20px' }}>{user.avatar || '👤'}</span>{' '}
-              <strong>{user.username}</strong>{' '}
-              <span style={{ color: user.online ? 'green' : 'gray' }}>
-                ● {user.online ? 'Online' : 'Offline'}
+        <ul>
+          {friends.map((friend) => (
+            <li key={friend.uid} style={{ marginBottom: '8px' }}>
+              {friend.avatar || '👤'} <strong>{friend.username}</strong>
+              {' '}
+              <span style={{ color: friend.online ? 'green' : 'red' }}>
+                {friend.online ? '🟢 Online' : '🔴 Offline'}
               </span>
             </li>
           ))}
