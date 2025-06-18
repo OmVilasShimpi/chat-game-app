@@ -1,6 +1,6 @@
 // src/components/FriendList.jsx
 import React, { useEffect, useState } from 'react';
-import { doc, getDoc, getDocs } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../auth/AuthContext';
 
@@ -9,36 +9,46 @@ export default function FriendList() {
   const [friends, setFriends] = useState([]);
 
   useEffect(() => {
-    const loadFriends = async () => {
-      if (!currentUser) return;
+    if (!currentUser) return;
 
-      try {
-        const friendsRef = doc(db, 'friends', currentUser.uid);
-        const friendsSnap = await getDoc(friendsRef);
+    const loadLiveFriends = async () => {
+      const friendsRef = doc(db, 'friends', currentUser.uid);
+      const friendsSnap = await getDoc(friendsRef);
 
-        if (!friendsSnap.exists()) {
-          setFriends([]);
-          return;
-        }
-
-        const friendUids = Object.keys(friendsSnap.data());
-        const friendProfiles = [];
-
-        for (const uid of friendUids) {
-          const userRef = doc(db, 'users', uid);
-          const userSnap = await getDoc(userRef);
-          if (userSnap.exists()) {
-            friendProfiles.push(userSnap.data());
-          }
-        }
-
-        setFriends(friendProfiles);
-      } catch (error) {
-        console.error("Failed to load friends:", error);
+      if (!friendsSnap.exists()) {
+        setFriends([]);
+        return;
       }
+
+      const friendUids = Object.keys(friendsSnap.data());
+      const unsubscribers = [];
+      const liveFriends = [];
+
+      friendUids.forEach((uid) => {
+        const userRef = doc(db, 'users', uid);
+        const unsub = onSnapshot(userRef, (snap) => {
+          if (snap.exists()) {
+            const data = snap.data();
+            liveFriends.push(data);
+            // Once we have all, update state
+            if (liveFriends.length === friendUids.length) {
+              setFriends([...liveFriends]);
+            }
+          }
+        });
+        unsubscribers.push(unsub);
+      });
+
+      return () => {
+        unsubscribers.forEach(unsub => unsub());
+      };
     };
 
-    loadFriends();
+    const cleanup = loadLiveFriends();
+
+    return () => {
+      if (cleanup instanceof Function) cleanup();
+    };
   }, [currentUser]);
 
   return (
@@ -50,8 +60,7 @@ export default function FriendList() {
         <ul>
           {friends.map((friend) => (
             <li key={friend.uid} style={{ marginBottom: '8px' }}>
-              {friend.avatar || '👤'} <strong>{friend.username}</strong>
-              {' '}
+              {friend.avatar || '👤'} <strong>{friend.username}</strong>{' '}
               <span style={{ color: friend.online ? 'green' : 'red' }}>
                 {friend.online ? '🟢 Online' : '🔴 Offline'}
               </span>

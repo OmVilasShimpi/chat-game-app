@@ -5,13 +5,17 @@ import Login from './auth/Login';
 import GoogleLoginButton from './auth/GoogleLoginButton';
 import { AuthProvider } from './auth/AuthContext';
 import { getAuth } from "firebase/auth";
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import UserList from './components/UserList';
 import ChatWindow from './components/ChatWindow';
 import FriendRequest from './components/FriendRequest';
 import FriendRequestsInbox from './components/FriendRequestsInbox';
 import FriendList from './components/FriendList';
+import GameInvitation from './components/GameInvitation';
+import TicTacToe from './components/TicTacToe';
+import GameInvitePopup from './components/GameInvitePopup';
+import useOutgoingGameWatch from './hooks/useOutgoingGameWatch';
 import { useAuth } from './auth/AuthContext';
 
 function UserInfo({ onLogout }) {
@@ -48,13 +52,15 @@ function UserInfo({ onLogout }) {
 function MainApp() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [friendsMap, setFriendsMap] = useState({});
+  const [activeGameId, setActiveGameId] = useState(null);
   const { currentUser } = useAuth();
 
   const handleLogout = () => {
     setSelectedUser(null);
+    setActiveGameId(null);
   };
 
-  // ✅ Real-time friend list listener
+  // Load friends
   useEffect(() => {
     if (!currentUser) return;
 
@@ -69,6 +75,39 @@ function MainApp() {
 
     return () => unsubscribe();
   }, [currentUser]);
+
+  // Mark user as online
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const markOnline = async () => {
+      const userRef = doc(db, 'users', currentUser.uid);
+      await setDoc(userRef, { online: true }, { merge: true });
+    };
+
+    markOnline();
+  }, [currentUser]);
+
+  // Validate access to the active game
+  useEffect(() => {
+    const checkGameAccess = async () => {
+      if (!currentUser || !activeGameId) return;
+
+      const gameRef = doc(db, 'games', activeGameId);
+      const snap = await getDoc(gameRef);
+      if (!snap.exists()) return setActiveGameId(null);
+
+      const game = snap.data();
+      if (!game.players.includes(currentUser.uid)) {
+        setActiveGameId(null);
+      }
+    };
+
+    checkGameAccess();
+  }, [activeGameId, currentUser]);
+
+  // Watch for game creation after sending invite
+  useOutgoingGameWatch(currentUser, setActiveGameId);
 
   const handleUserSelect = (user) => {
     if (friendsMap[user.uid]) {
@@ -93,6 +132,11 @@ function MainApp() {
           <FriendRequest />
           <FriendRequestsInbox />
           <FriendList />
+          <GameInvitation onGameCreated={setActiveGameId} />
+          <GameInvitePopup onGameAccepted={setActiveGameId} />
+          {activeGameId && (
+            <TicTacToe gameId={activeGameId} onExit={() => setActiveGameId(null)} />
+          )}
         </>
       )}
     </div>
