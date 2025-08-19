@@ -1,80 +1,158 @@
-/* Ensure full-page layout */
+/* ===== App baseline ===== */
 html, body, #root {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
 }
+*, *::before, *::after { box-sizing: border-box; }
 
-/* Global box sizing */
-*, *::before, *::after {
-  box-sizing: border-box;
+:root{
+  /* Theme */
+  --bg:#0b0c10;
+  --panel:#111319;
+  --panel-2:#151826;
+  --border:#2a2d44;
+  --text:#e8e8ea;
+  --muted:#b9bbca;
+  --accent:#6ee7ff;
+
+  /* Typography */
+  --ff: system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ff);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+/* Minimal link defaults (buttons use .btn classes) */
+a { color: inherit; text-decoration: none; }
+
+/* ===== Blast FX ===== */
+@keyframes blastFlash {
+  0%   { opacity: 0 }
+  8%   { opacity: 1 }
+  55%  { opacity: 0.6 }
+  100% { opacity: 0 }
 }
-a:hover {
-  color: #535bf2;
+@keyframes shockwave {
+  0%   { transform: translate(-50%, -50%) scale(0.25); opacity: .95; filter: blur(0px); }
+  70%  { opacity: .5; }
+  100% { transform: translate(-50%, -50%) scale(6); opacity: 0; filter: blur(3px); }
+}
+.shockwave {
+  position: absolute;
+  left: 50%; top: 45%;
+  width: 140px; height: 140px;
+  border: 3px solid rgba(255,255,255,.85);
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: shockwave 900ms cubic-bezier(.22,.61,.36,1) forwards;
+}
+/* Optional class if you want to use it instead of inline animation */
+.blast-flash {
+  animation: blastFlash 650ms ease-out both;
 }
 
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  background-color: var(--bg-color, #ffffff);
+/* ===== Fancy Landing Card ===== */
+.landing-card{
+  position: relative;
+  width: 560px; max-width: 92vw;
+  color: var(--text);
+  background: rgba(17,19,25,0.86);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 22px 22px 18px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.03);
+  backdrop-filter: blur(10px) saturate(120%);
+}
+.landing-card.fancy{
+  transform-style: preserve-3d;
+  will-change: transform;
+  overflow: hidden;
+}
+/* Conic border glow */
+.landing-card.fancy .glow{
+  position: absolute; inset: -2px; border-radius: inherit; pointer-events: none;
+  background: conic-gradient(from 0deg, #6ee7ff, #a78bfa, #f472b6, #6ee7ff);
+  filter: blur(16px); opacity: .22; animation: spin 14s linear infinite;
+}
+@keyframes spin { to { transform: rotate(1turn); } }
+/* Cursor-follow shine (uses CSS vars --mx/--my set inline by component) */
+.landing-card.fancy .shine{
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(500px 300px at var(--mx,50%) var(--my,50%),
+              rgba(110,231,255,.16), rgba(167,139,250,.10) 40%, transparent 60%);
+  mix-blend-mode: screen; transition: background-position .2s ease;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* Top section */
+.card-top{
+  display:grid; grid-template-columns:auto 1fr; gap:14px; align-items:center;
+  margin-bottom: 8px;
 }
+.logo{
+  width:60px;height:60px;border-radius:16px;display:grid;place-items:center;
+  background: radial-gradient(120% 120% at 20% 10%, #1f2642, #0f1320);
+  border:1px solid var(--border);
+  box-shadow: 0 12px 22px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.04);
+  font-size:28px;
+}
+.brand h1{ margin:0 }
+.brand p{ margin:6px 0 0; color: var(--muted); }
+.brand-title{
+  font-size: 30px; letter-spacing:.2px; margin:0;
+  background: linear-gradient(90deg,#fff,#bfe8ff 35%,#9ee9ff 55%,#a78bfa 75%,#fff);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  background-size: 200% 100%; animation: titleGlow 6s linear infinite;
+}
+@keyframes titleGlow { to { background-position: 200% 0; } }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
+/* CTAs */
+.cta-row{
+  display:flex; gap:12px; margin:14px 0 6px; justify-content:center; flex-wrap:wrap;
 }
-button:hover {
-  border-color: #646cff;
+.btn{
+  padding:10px 16px;border-radius:12px;font-weight:700;text-decoration:none;
+  border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;min-width:140px;
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+  color:#fff;
 }
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+.btn:hover{ transform: translateY(-1px); }
+.btn:active{ transform: translateY(0); }
+.btn-primary{
+  background: linear-gradient(180deg,#1e2130,#171b29);
+  box-shadow: 0 10px 24px rgba(110,231,255,.08);
 }
+.btn-primary:hover{ box-shadow: 0 14px 28px rgba(110,231,255,.14); }
+.btn-ghost{ background: rgba(255,255,255,.03); }
+.btn-ghost:hover{ background: rgba(255,255,255,.06); }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* Features grid */
+.features{
+  list-style:none; padding:0; margin:14px 0 8px;
+  display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; color:#d9dde7;
+}
+.features li{
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+  border:1px solid var(--border); padding:10px 12px; border-radius:12px; font-size:14px;
+  transition: transform .1s ease, box-shadow .1s ease;
+}
+.features li:hover{ transform: translateY(-1px); box-shadow: 0 8px 18px rgba(0,0,0,.25); }
+
+/* Footer */
+.card-footer{ margin-top:8px; display:flex; justify-content:space-between; align-items:center; color:var(--muted); }
+
+/* ===== Responsive tweaks ===== */
+@media (max-width: 480px){
+  .brand-title{ font-size: 24px; }
+  .logo{ width:52px; height:52px; font-size:24px; }
+  .features{ grid-template-columns: 1fr; }
+  .btn{ min-width: 130px; }
 }
