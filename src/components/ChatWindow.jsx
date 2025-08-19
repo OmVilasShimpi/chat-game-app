@@ -1,4 +1,3 @@
-// src/components/ChatWindow.jsx
 import React, { useEffect, useState, useRef } from 'react';
 import {
   collection,
@@ -20,13 +19,14 @@ export default function ChatWindow({ selectedUser }) {
   const [isTyping, setIsTyping] = useState(false);
   const [userProfiles, setUserProfiles] = useState({});
   const bottomRef = useRef(null);
+  const chatRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
   const chatId = [currentUser.uid, selectedUser.uid].sort().join('_');
   const typingRef = doc(db, 'chats', chatId, 'typingStatus', 'status');
   const selectedUserRef = doc(db, 'users', selectedUser.uid);
 
-  // 📥 Load sender/receiver profiles
+  // Load sender/receiver profiles
   useEffect(() => {
     const loadProfiles = async () => {
       const senderDoc = await getDoc(doc(db, 'users', currentUser.uid));
@@ -41,7 +41,7 @@ export default function ChatWindow({ selectedUser }) {
     loadProfiles();
   }, [selectedUser]);
 
-  // 🔁 Listen to messages and update delivered/seen if recipient
+  // Listen to messages
   useEffect(() => {
     const q = query(
       collection(db, 'chats', chatId, 'messages'),
@@ -59,13 +59,7 @@ export default function ChatWindow({ selectedUser }) {
           (!msg.delivered || !msg.seen)
         ) {
           const msgRef = doc(db, 'chats', chatId, 'messages', docSnap.id);
-
-          await setDoc(
-            msgRef,
-            { delivered: true, seen: true },
-            { merge: true }
-          );
-
+          await setDoc(msgRef, { delivered: true, seen: true }, { merge: true });
           msg.delivered = true;
           msg.seen = true;
         }
@@ -75,14 +69,20 @@ export default function ChatWindow({ selectedUser }) {
 
       setMessages(msgs);
 
-      setTimeout(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+      // Scroll only if user is near bottom
+      const container = chatRef.current;
+      const nearBottom = container?.scrollHeight - container?.scrollTop - container?.clientHeight < 100;
+      if (nearBottom) {
+        setTimeout(() => {
+          bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 50);
+      }
     });
 
     return () => unsubscribe();
   }, [chatId]);
 
+  // Typing status
   useEffect(() => {
     const unsubscribeTyping = onSnapshot(typingRef, (docSnap) => {
       const data = docSnap.data();
@@ -91,10 +91,6 @@ export default function ChatWindow({ selectedUser }) {
       } else {
         setIsTyping(false);
       }
-
-      setTimeout(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
     });
 
     return () => unsubscribeTyping();
@@ -154,7 +150,7 @@ export default function ChatWindow({ selectedUser }) {
   return (
     <div style={{ border: '1px solid #ccc', padding: '16px', marginTop: '16px' }}>
       <h3>Chat with {selectedUser.username}</h3>
-      <div style={{ height: '200px', overflowY: 'auto', marginBottom: '10px' }}>
+      <div ref={chatRef} style={{ height: '200px', overflowY: 'auto', marginBottom: '10px' }}>
         {messages.map((msg, idx) => {
           const sender = userProfiles[msg.senderId];
           const time = msg.timestamp?.toDate().toLocaleTimeString([], {
